@@ -1,9 +1,10 @@
 {
   "printWidth": 80,
   "tabWidth": 2,
-  "useTabs": true,
+  "useTabs": false,
   "singleQuote": true,
   "semi": false,
   "trailingComma": "none",
-  "bracketSpacing": true
- }
+  "bracketSpacing": true,
+  "endOfLine": "lf"
+}
