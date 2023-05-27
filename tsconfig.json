@@ -17,6 +17,9 @@
     "noImplicitReturns": false,
     "skipLibCheck": true,
     "baseUrl": "./packages",
-    "jsx": "react"
+    "jsx": "react",
+    "paths": {
+      "hostConfig": ["./react-reconciler/src/hostConfig"]
+    }
   }
 }
