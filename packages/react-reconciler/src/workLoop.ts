@@ -16,7 +16,7 @@ export function scheduleUpdateOnFiber(fiber: FiberNode) {
 }
 
 // traverse from fiber to fiberRootNode
-function markUpdateFromFiberToRoot(fiber: FiberNode) {
+function markUpdateFromFiberToRoot(fiber: FiberNode): FiberRootNode | null {
   let node = fiber
   let parent = node.return
   while (parent) {
@@ -29,14 +29,20 @@ function markUpdateFromFiberToRoot(fiber: FiberNode) {
   return null
 }
 
-function renderRoot(root: FiberRootNode) {
+function renderRoot(root: FiberRootNode | null) {
+  if (!root) {
+    console.error('root is null')
+    return
+  }
   prepareRefreshStack(root)
   while (true) {
     try {
       workLoop()
       break
     } catch (e) {
-      console.warn('workLoop error: ', e)
+      if (__DEV__) {
+        console.warn('workLoop error: ', e)
+      }
       workInProgress = null
     }
   }
