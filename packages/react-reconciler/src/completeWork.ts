@@ -52,6 +52,7 @@ function appendAllChildren(parent: FiberNode, wip: FiberNode) {
   let node = wip.child
   while (node !== null) {
     // just append DOM element (Host)
+    // TODO: Question, will it append the same DOM Element multiple times? Since it will traverse from bottom to top
     if (node.tag === HostComponent || node.tag === HostText) {
       appendInitialChild(parent, node?.stateNode)
     } else if (node.child) {
