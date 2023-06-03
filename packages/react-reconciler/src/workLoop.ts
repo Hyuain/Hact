@@ -2,6 +2,8 @@ import { beginWork } from './beginWork'
 import { completeWork } from './completeWork'
 import { FiberNode, FiberRootNode, createWorkInProgress } from './fiber'
 import { HostRoot } from './workTags'
+import { MutationMask, NoFlags } from './fiberFlags'
+import { commitMutationEffects } from './commitWork'
 
 let workInProgress: FiberNode | null = null
 
@@ -50,7 +52,34 @@ function renderRoot(root: FiberRootNode | null) {
   const finishedWork = root.current.alternate
   root.finishedWork = finishedWork
   // commit using flags in wip FiberNode tree
-  // commitRoot(root)
+  commitRoot(root)
+}
+
+function commitRoot(root: FiberRootNode) {
+  const finishedWork = root.finishedWork
+  if (finishedWork === null) {
+    return
+  }
+  if (__DEV__) {
+    console.log('commitRoot: ', finishedWork)
+  }
+  // reset finishedWork
+  root.finishedWork = null
+  // check flags and subtreeFlags to determinate whether to run 3 phases:
+  // beforeMutation, mutation, layout
+  const subtreeHasEffects =
+    (finishedWork.subtreeFlags & MutationMask) !== NoFlags
+  const rootHasEffect = (finishedWork.flags & MutationMask) !== NoFlags
+  if (subtreeHasEffects || rootHasEffect) {
+    // beforeMutation
+    // mutation
+    commitMutationEffects(finishedWork)
+    // let finishedWork Fiber tree be current Fiber tree (double cache)
+    root.current = finishedWork
+    // layout
+  } else {
+    root.current = finishedWork
+  }
 }
 
 function workLoop() {
