@@ -24,12 +24,13 @@ export class FiberNode {
   public updateQueue: unknown
 
   public flags: Flags
+  public subtreeFlags: Flags
 
   constructor(tag: WorkTag, pendingProps: Props, key: Key) {
     // e.g. for functional component, this is FunctionalComponent(0)
     this.tag = tag
     this.key = key
-    // e.g. point to fiberRootNode
+    // e.g. pointer for HostRoot to FiberRootNode (the parent of HostRoot FiberNode), or DOM Element
     this.stateNode = null
     // e.g. for functional component, this is the function itself
     this.type = null
@@ -56,6 +57,7 @@ export class FiberNode {
 
     // side effect
     this.flags = NoFlags
+    this.subtreeFlags = NoFlags
   }
 }
 
@@ -78,7 +80,7 @@ export const createWorkInProgress = (
 ): FiberNode => {
   // double buffering, the alternate is the workInProgress
   let wip = current.alternate
-  if (!wip) {
+  if (wip === null) {
     // mount
     wip = new FiberNode(current.tag, pendingProps, current.key)
     wip.stateNode = current.stateNode

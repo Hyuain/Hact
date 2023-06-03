@@ -38,7 +38,7 @@ export const processUpdateQueue = <State>(
   const result: ReturnType<typeof processUpdateQueue<State>> = {
     memorizedState: baseState
   }
-  if (pendingUpdate) {
+  if (pendingUpdate !== null) {
     const action = pendingUpdate.action
     if (action instanceof Function) {
       result.memorizedState = action(baseState)

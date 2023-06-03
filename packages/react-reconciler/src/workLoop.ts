@@ -30,7 +30,7 @@ function markUpdateFromFiberToRoot(fiber: FiberNode): FiberRootNode | null {
 }
 
 function renderRoot(root: FiberRootNode | null) {
-  if (!root) {
+  if (root === null) {
     console.error('root is null')
     return
   }
@@ -46,6 +46,11 @@ function renderRoot(root: FiberRootNode | null) {
       workInProgress = null
     }
   }
+  // the whole wip FiberNode tree
+  const finishedWork = root.current.alternate
+  root.finishedWork = finishedWork
+  // commit using flags in wip FiberNode tree
+  // commitRoot(root)
 }
 
 function workLoop() {
@@ -57,7 +62,7 @@ function workLoop() {
 function performUnitOfWork(fiber: FiberNode) {
   const next = beginWork(fiber)
   fiber.memoizedProps = fiber.pendingProps
-  if (!next) {
+  if (next === null) {
     completeUnitOfWork(fiber)
   } else {
     workInProgress = next
@@ -69,7 +74,7 @@ function completeUnitOfWork(fiber: FiberNode) {
   while (node) {
     completeWork(node)
     const sibling = node.sibling
-    if (sibling) {
+    if (sibling !== null) {
       workInProgress = sibling
       return
     }

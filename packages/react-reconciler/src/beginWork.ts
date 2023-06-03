@@ -58,9 +58,9 @@ function reconcileChildren(wip: FiberNode, children?: ReactElement) {
   // a small optimize for first render, side effect 'Placement' only happen once:
   // for <App />, current is null, go to mount
   // but for HostRoot Fiber (whose new memorized state, or child is <App />), current is not null, go to update
-  // this help first render to mount several times, without side effect such as 'Placement'
-  // but update only once (HostRoot), with side effect such as 'Placement'
-  if (current) {
+  // this help first render to mount children several times, without side effect such as 'Placement'
+  // but update HostRoot only once, with side effect such as 'Placement'
+  if (current !== null) {
     // update, with side effect
     wip.child = reconcileChildFibers(wip, current.child, children)
   } else {
