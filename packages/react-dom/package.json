@@ -1,11 +1,16 @@
 {
-  "name": "shared",
+  "name": "react-dom",
   "version": "1.0.0",
-  "description": "Helper methods and type declaration",
+  "description": "",
+  "module": "index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "shared": "workspace:*",
+    "react-reconciler": "workspace:*"
+  },
+  "peerDependencies": {
     "react": "workspace:*"
   },
   "keywords": [],

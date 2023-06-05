@@ -13,6 +13,8 @@ function ChildReconciler(shouldTrackEffects: boolean) {
   ) {
     const fiber = createFiberFromElement(newChild)
     fiber.return = returnFiber
+    // TODO currentFiber
+    console.log(currentFiber)
     return fiber
   }
 
@@ -23,6 +25,8 @@ function ChildReconciler(shouldTrackEffects: boolean) {
   ) {
     const fiber = new FiberNode(HostText, { content: newChild }, null)
     fiber.return = returnFiber
+    // TODO currentFiber
+    console.log(currentFiber)
     return fiber
   }
 

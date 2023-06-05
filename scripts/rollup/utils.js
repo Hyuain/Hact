@@ -24,7 +24,8 @@ export function getBaseRollupPlugins({
   typescript = {},
   alias = {
     // replace __DEV__ to true in development mode and false in production mode
-    __DEV__: true
+    __DEV__: true,
+    preventAssignment: true
   }
 } = {}) {
   return [replace(alias), cjs(), ts(typescript)]

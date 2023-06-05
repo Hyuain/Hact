@@ -19,7 +19,7 @@
     "baseUrl": "./packages",
     "jsx": "react",
     "paths": {
-      "hostConfig": ["./react-reconciler/src/hostConfig"]
+      "hostConfig": ["./react-dom/src/hostConfig"]
     }
   }
 }
