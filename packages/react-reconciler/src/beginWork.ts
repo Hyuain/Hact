@@ -1,8 +1,14 @@
 import { ReactElement } from 'shared/ReactTypes'
 import { FiberNode } from './fiber'
 import { UpdateQueue, processUpdateQueue } from './updateQueue'
-import { HostRoot, HostComponent, HostText } from './workTags'
+import {
+  HostRoot,
+  HostComponent,
+  HostText,
+  FunctionComponent
+} from './workTags'
 import { mountChildFibers, reconcileChildFibers } from './childFibers'
+import { renderWithHooks } from './fiberHooks'
 
 // dfs 递归中的“递”
 export const beginWork = (wip: FiberNode): FiberNode | null => {
@@ -15,6 +21,8 @@ export const beginWork = (wip: FiberNode): FiberNode | null => {
     case HostText:
       // HostText ReactElement has no children
       return null
+    case FunctionComponent:
+      return updateFunctionComponent(wip)
     default:
       if (__DEV__) {
         console.error('No corresponding tag in beginWork: ', wip.tag)
@@ -46,6 +54,12 @@ function updateHostRoot(wip: FiberNode) {
 function updateHostComponent(wip: FiberNode) {
   const nextProps = wip.pendingProps
   const nextChildren = nextProps.children
+  reconcileChildren(wip, nextChildren)
+  return wip.child
+}
+
+function updateFunctionComponent(wip: FiberNode) {
+  const nextChildren = renderWithHooks(wip)
   reconcileChildren(wip, nextChildren)
   return wip.child
 }
