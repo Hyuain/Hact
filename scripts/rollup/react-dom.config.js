@@ -6,7 +6,7 @@ import {
 import generatePackageJson from 'rollup-plugin-generate-package-json'
 import alias from '@rollup/plugin-alias'
 
-const { name, module } = getPackageJSON('react-dom')
+const { name, module, peerDependencies } = getPackageJSON('react-dom')
 const packagePath = resolvePackagePath(name)
 const packageDistPath = resolvePackagePath(name, true)
 
@@ -28,6 +28,12 @@ export default [
         format: 'umd'
       }
     ],
+    // react-dom consists of hostConfig and react-reconciler,
+    // react-reconciler will use internals inshared which relies on react,
+    // so 'react' package will not be packaged into react-dom.
+    // but if so, both react-dom and react will have independent internals.
+    // we need them share internals and do not package react into react-dom.
+    external: [...Object.keys(peerDependencies)],
     plugins: [
       ...getBaseRollupPlugins(),
       alias({
