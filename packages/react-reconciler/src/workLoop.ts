@@ -61,7 +61,7 @@ function commitRoot(root: FiberRootNode) {
     return
   }
   if (__DEV__) {
-    console.log('commitRoot: ', finishedWork)
+    console.warn('commitRootStart: ', finishedWork)
   }
   // reset finishedWork
   root.finishedWork = null
