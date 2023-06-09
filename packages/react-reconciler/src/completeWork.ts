@@ -12,7 +12,7 @@ import {
   HostRoot,
   HostText
 } from './workTags'
-import { NoFlags } from './fiberFlags'
+import { NoFlags, Update } from './fiberFlags'
 
 // dfs 递归中的“归”
 // construct off-screen DOM tree for Host
@@ -40,6 +40,11 @@ export const completeWork = (wip: FiberNode) => {
     case HostText:
       if (current !== null && wip.stateNode) {
         // update
+        const oldText = current.memorizedState.content
+        const newText = newProps.content
+        if (oldText !== newText) {
+          markUpdate(wip)
+        }
       } else {
         // mount
         const instance = createTextInstance(newProps.content)
@@ -98,4 +103,8 @@ function bubbleProperties(wip: FiberNode) {
     child = child.sibling
   }
   wip.subtreeFlags |= subtreeFlags
+}
+
+function markUpdate(fiber: FiberNode) {
+  fiber.flags |= Update
 }
