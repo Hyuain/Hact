@@ -15,7 +15,7 @@ export default [
     input: `${packagePath}/${module}`,
     output: {
       file: `${packageDistPath}/index.js`,
-      name: 'react',
+      name: 'React',
       format: 'umd'
     },
     plugins: [
