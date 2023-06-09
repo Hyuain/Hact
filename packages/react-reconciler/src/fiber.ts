@@ -22,6 +22,7 @@ export class FiberNode {
   public memorizedState: any
   public alternate: FiberNode | null
   public updateQueue: unknown
+  public deletions: FiberNode[] | null
 
   public flags: Flags
   public subtreeFlags: Flags
@@ -58,6 +59,7 @@ export class FiberNode {
     // side effect
     this.flags = NoFlags
     this.subtreeFlags = NoFlags
+    this.deletions = null
   }
 }
 
@@ -90,6 +92,7 @@ export const createWorkInProgress = (
     // update
     wip.pendingProps = pendingProps
     wip.flags = NoFlags
+    wip.deletions = null
   }
   wip.type = current.type
   wip.updateQueue = current.updateQueue
