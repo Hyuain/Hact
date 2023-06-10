@@ -3,8 +3,9 @@ import ReactDOM from 'react-dom/client'
 
 function App() {
   const [num, setNum] = useState(100)
-  window.setNum = setNum
-  return <div>{num === 2 ? <Child /> : <div>{num}</div>}</div>
+  // window.setNum = setNum
+  // return <div>{num === 2 ? <Child /> : <div>{num}</div>}</div>
+  return <div onClickCapture={() => setNum(Math.random())}>{num}</div>
 }
 
 function Child() {
