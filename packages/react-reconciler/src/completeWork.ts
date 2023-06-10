@@ -5,6 +5,7 @@ import {
   createTextInstance,
   Instance
 } from 'hostConfig'
+import { updateFiberProps } from 'react-dom/src/SyntheticEvent'
 import { FiberNode } from './fiber'
 import {
   FunctionComponent,
@@ -27,6 +28,8 @@ export const completeWork = (wip: FiberNode) => {
     case HostComponent:
       if (current !== null && wip.stateNode) {
         // update
+        // TODO: we should do as HostText, just mark as update, and updateFiber when commit
+        updateFiberProps(wip.stateNode, newProps)
       } else {
         // mount
         // 1. construct DOM
