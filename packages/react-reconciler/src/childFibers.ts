@@ -24,23 +24,44 @@ function ChildReconciler(shouldTrackEffects: boolean) {
     }
   }
 
+  function deleteChildAndSiblings(
+    returnFiber: FiberNode,
+    currentFirstChild: FiberNode | null
+  ) {
+    if (!shouldTrackEffects) {
+      return
+    }
+    let childToDelete = currentFirstChild
+    while (childToDelete !== null) {
+      deleteChild(returnFiber, childToDelete)
+      childToDelete = childToDelete.sibling
+    }
+  }
+
+  // A -> B
+  // ABC -> A
   function reconcileSingleElement(
     returnFiber: FiberNode,
     currentFiber: FiberNode | null,
     newChild: ReactElement
   ) {
     const key = newChild.key
-    // update
-    reuseProcess: if (currentFiber !== null) {
+    // update (check whether current fiber and its siblings can be reused)
+    while (currentFiber !== null) {
       if (currentFiber.key === key) {
         if (newChild.$$typeof === REACT_ELEMENT_TYPE) {
+          // both keys and types are same, current fiber can be reused
+          // rest fibers (siblings of current fiber) will be deleted
           if (currentFiber.type === newChild.type) {
             const existing = useFiber(currentFiber, newChild.props)
             existing.return = returnFiber
+            deleteChildAndSiblings(returnFiber, currentFiber.sibling)
             return existing
           }
-          deleteChild(returnFiber, currentFiber)
-          break reuseProcess
+          // keys are same but types are different, current fiber can't be reused
+          // delete all old fibers
+          deleteChildAndSiblings(returnFiber, currentFiber)
+          break
         } else {
           if (__DEV__) {
             console.error(
@@ -48,10 +69,12 @@ function ChildReconciler(shouldTrackEffects: boolean) {
               newChild.type
             )
           }
-          break reuseProcess
+          break
         }
       } else {
+        // keys are different, delete current fiber, and traverse to slibings
         deleteChild(returnFiber, currentFiber)
+        currentFiber = currentFiber.sibling
       }
     }
     // mount (create new FiberNode from ReactElement)
@@ -68,13 +91,15 @@ function ChildReconciler(shouldTrackEffects: boolean) {
     newChild: string | number
   ) {
     // update
-    if (currentFiber !== null) {
+    while (currentFiber !== null) {
       if (currentFiber.tag === HostText) {
         const existing = useFiber(currentFiber, { content: newChild })
         existing.return = returnFiber
+        deleteChildAndSiblings(returnFiber, currentFiber.sibling)
         return existing
       }
       deleteChild(returnFiber, currentFiber)
+      currentFiber = currentFiber.sibling
     }
     const fiber = new FiberNode(HostText, { content: newChild }, null)
     fiber.return = returnFiber
