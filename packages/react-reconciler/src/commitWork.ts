@@ -70,21 +70,42 @@ const commitMutationEffectsOnFiber = (finishedWork: FiberNode) => {
   }
 }
 
+const recordHostsToDelete = (
+  hostsToDelete: FiberNode[],
+  unmountFiber: FiberNode
+) => {
+  const lastHost = hostsToDelete[hostsToDelete.length - 1]
+  if (!lastHost) {
+    // 1. push first host found
+    hostsToDelete.push(unmountFiber)
+  } else {
+    // 2. check if unmountFiber is a sibling of lastHost
+    let node = lastHost.sibling
+    while (node !== null) {
+      if (unmountFiber === node) {
+        hostsToDelete.push(unmountFiber)
+      }
+      node = node.sibling
+    }
+  }
+}
+
 const commitDeletion = (childToDelete: FiberNode) => {
-  let rootHost: FiberNode | null = null
-  // traverse subtree
+  // need to delete first host in the subtree and it's siblings:
+  // eg. we need delete <p>xxx</p> and it's sibling <p>yyy</p>:
+  // <div>
+  //   <><p>xxx</p><p>yyy</p><>
+  // </div>
+  const rootHostsToDelete: FiberNode[] = []
+  // traverse subtree to find hosts of children to delete
   commitNestedComponent(childToDelete, (unmountFiber) => {
     switch (unmountFiber.tag) {
       case HostComponent:
-        if (rootHost === null) {
-          rootHost = unmountFiber
-        }
+        recordHostsToDelete(rootHostsToDelete, unmountFiber)
         // TODO: unmount ref
         return
       case HostText:
-        if (rootHost === null) {
-          rootHost = unmountFiber
-        }
+        recordHostsToDelete(rootHostsToDelete, unmountFiber)
         return
       case FunctionComponent:
         // TODO useEffect unmount
@@ -96,11 +117,13 @@ const commitDeletion = (childToDelete: FiberNode) => {
     }
   })
 
-  // remove host
-  if (rootHost !== null) {
-    const hostParent = getHostParent(rootHost)
+  // remove hosts
+  if (rootHostsToDelete.length) {
+    const hostParent = getHostParent(childToDelete)
     if (hostParent !== null) {
-      removeChild((rootHost as FiberNode).stateNode, hostParent)
+      rootHostsToDelete.forEach((host) => {
+        removeChild(host.stateNode, hostParent)
+      })
     }
   }
   childToDelete.return = null
