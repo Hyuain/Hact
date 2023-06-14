@@ -1,12 +1,14 @@
 import { Props, ReactElement } from 'shared/ReactTypes'
 import {
-  FiberNode,
   createFiberFromElement,
-  createWorkInProgress
+  createWorkInProgress,
+  FiberNode
 } from './fiber'
 import { REACT_ELEMENT_TYPE } from 'shared/ReactSymbols'
 import { HostText } from './workTags'
 import { ChildDeletion, Placement } from './fiberFlags'
+
+type ExistingChildren = Map<string | number, FiberNode>
 
 // generate reconcileChildFibers according to shouldTrackEffects
 function ChildReconciler(shouldTrackEffects: boolean) {
@@ -119,6 +121,99 @@ function ChildReconciler(shouldTrackEffects: boolean) {
     return fiber
   }
 
+  function reconcileChildrenArray(
+    returnFiber: FiberNode,
+    currentFirstChild: FiberNode | null,
+    newChild: any[]
+  ) {
+    // index of last reusable fiber in current
+    let lastPlacedIndex = 0
+    // last fiber we created when we traversed newChild
+    let lastNewFiber: FiberNode | null = null
+    // first fiber we created when we traversed newChild
+    let firstNewFiber: FiberNode | null = null
+
+    // 1. store current into map
+    const existingChildren: ExistingChildren = new Map()
+    let current = currentFirstChild
+    while (current !== null) {
+      const key = current.key !== null ? current.key : current.index
+      existingChildren.set(key, current)
+      current = current.sibling
+    }
+    for (let i = 0; i < newChild.length; i++) {
+      // 2. traverse newChild, check whether current can be reused
+      const after = newChild[i]
+      const newFiber = updateFromMap(returnFiber, existingChildren, i, after)
+      // false, null ...
+      if (newFiber === null) {
+        continue
+      }
+      // 3. mark placement (insert or move)
+      newFiber.index = i
+      newFiber.return = returnFiber
+      if (lastNewFiber === null) {
+        firstNewFiber = newFiber
+        lastNewFiber = newFiber
+      } else {
+        lastNewFiber.sibling = newFiber
+        lastNewFiber = lastNewFiber.sibling
+      }
+      if (!shouldTrackEffects) {
+        continue
+      }
+      const current = newFiber.alternate
+      if (current !== null) {
+        const oldIndex = current.index
+        if (oldIndex < lastPlacedIndex) {
+          // if new relative order is changed, mark move
+          newFiber.flags |= Placement
+        } else {
+          lastPlacedIndex = oldIndex
+        }
+      } else {
+        // mount, mark insert
+        newFiber.flags |= Placement
+      }
+    }
+    // 4. mark deletion to others in map
+    existingChildren.forEach((child) => {
+      deleteChild(returnFiber, child)
+    })
+    return firstNewFiber
+  }
+
+  function updateFromMap(
+    returnFiber: FiberNode,
+    existingChildren: ExistingChildren,
+    index: number,
+    element: any
+  ): FiberNode | null {
+    const key = element.key !== null ? element.key : index
+    const before = existingChildren.get(key)
+    // HostText
+    if (typeof element === 'string' || typeof element === 'number') {
+      if (before && before.tag === HostText) {
+        existingChildren.delete(key)
+        return useFiber(before, { content: String(element) })
+      }
+      return new FiberNode(HostText, { content: String(element) }, null)
+    }
+    // ReactElement
+    if (typeof element === 'object' && element !== null) {
+      switch (element.$$typeof) {
+        case REACT_ELEMENT_TYPE:
+          if (before && before.type === element.type) {
+            existingChildren.delete(key)
+            return useFiber(before, element.props)
+          }
+          return createFiberFromElement(element)
+      }
+    }
+    // TODO: Array
+    return null
+  }
+
   return function reconcileChildFibers(
     returnFiber: FiberNode,
     currentFiber: FiberNode | null,
@@ -137,6 +232,9 @@ function ChildReconciler(shouldTrackEffects: boolean) {
               newChild.$$typeof
             )
           }
+      }
+      if (Array.isArray(newChild)) {
+        return reconcileChildrenArray(returnFiber, currentFiber, newChild)
       }
     }
 
