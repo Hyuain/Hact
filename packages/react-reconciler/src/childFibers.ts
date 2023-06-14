@@ -220,6 +220,9 @@ function ChildReconciler(shouldTrackEffects: boolean) {
     newChild?: ReactElement
   ): FiberNode | null {
     if (typeof newChild === 'object' && newChild !== null) {
+      if (Array.isArray(newChild)) {
+        return reconcileChildrenArray(returnFiber, currentFiber, newChild)
+      }
       switch (newChild.$$typeof) {
         case REACT_ELEMENT_TYPE:
           return placeSingleChild(
@@ -232,9 +235,6 @@ function ChildReconciler(shouldTrackEffects: boolean) {
               newChild.$$typeof
             )
           }
-      }
-      if (Array.isArray(newChild)) {
-        return reconcileChildrenArray(returnFiber, currentFiber, newChild)
       }
     }
 

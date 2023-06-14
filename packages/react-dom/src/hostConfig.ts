@@ -26,6 +26,14 @@ export const createTextInstance = (content: string) => {
 
 export const appendChildToContainer = appendInitialChild
 
+export const insertChildToContainer = (
+  child: Instance,
+  container: Container,
+  before: Instance
+) => {
+  container.insertBefore(child, before)
+}
+
 export const commitUpdate = (fiber: FiberNode) => {
   switch (fiber.tag) {
     case HostText:

@@ -16,6 +16,8 @@ import {
   appendChildToContainer,
   commitUpdate,
   Container,
+  insertChildToContainer,
+  Instance,
   removeChild
 } from 'hostConfig'
 
@@ -137,9 +139,45 @@ const commitPlacement = (finishedWork: FiberNode) => {
   if (__DEV__) {
     console.warn('commitPlacement: ', finishedWork)
   }
-  const hostParent = getHostParent(finishedWork)
-  if (hostParent !== null) {
-    appendPlacementNodeIntoContainer(finishedWork, hostParent)
+  const hostParent = getHostParent(finishedWork) as Container
+  const hostSibling = getHostSibling(finishedWork)
+
+  appendChildOrInsertBeforeIntoContainer(finishedWork, hostParent, hostSibling)
+}
+
+function getHostSibling(fiber: FiberNode) {
+  let node: FiberNode = fiber
+  findSibling: while (true) {
+    // if no siblings, traverse up to find host sibling
+    while (node.sibling === null) {
+      const parent = node.return
+      if (
+        parent === null ||
+        parent.tag === HostComponent ||
+        parent.tag === HostRoot
+      ) {
+        return null
+      }
+      node = parent
+    }
+    node.sibling.return = node.return
+    node = node.sibling
+    // if direct sibling is not host, traverse down to find host sibling
+    while (node.tag !== HostText && node.tag !== HostComponent) {
+      if ((node.flags & Placement) !== NoFlags) {
+        // unstable host can not be host sibling
+        continue findSibling
+      }
+      if (node.child === null) {
+        continue findSibling
+      } else {
+        node.child.return = node
+        node = node.child
+      }
+    }
+    if ((node.flags & Placement) === NoFlags) {
+      return node.stateNode
+    }
   }
 }
 
@@ -161,21 +199,26 @@ function getHostParent(fiber: FiberNode): Container | null {
   return null
 }
 
-function appendPlacementNodeIntoContainer(
+function appendChildOrInsertBeforeIntoContainer(
   finishedWork: FiberNode,
-  hostParent: Container
+  hostParent: Container,
+  before?: Instance
 ) {
-  // traverse down to find the first host node to append
   if (finishedWork.tag === HostComponent || finishedWork.tag === HostText) {
-    appendChildToContainer(hostParent, finishedWork.stateNode)
+    if (before) {
+      insertChildToContainer(finishedWork.stateNode, hostParent, before)
+    } else {
+      appendChildToContainer(hostParent, finishedWork.stateNode)
+    }
     return
   }
+  // traverse down to find the first host node to append
   const child = finishedWork.child
   if (child !== null) {
-    appendPlacementNodeIntoContainer(child, hostParent)
+    appendChildOrInsertBeforeIntoContainer(child, hostParent)
     let sibling = child.sibling
     while (sibling !== null) {
-      appendPlacementNodeIntoContainer(sibling, hostParent)
+      appendChildOrInsertBeforeIntoContainer(sibling, hostParent)
       sibling = sibling.sibling
     }
   }
