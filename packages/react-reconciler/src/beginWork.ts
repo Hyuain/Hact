@@ -5,7 +5,8 @@ import {
   HostRoot,
   HostComponent,
   HostText,
-  FunctionComponent
+  FunctionComponent,
+  Fragment
 } from './workTags'
 import { mountChildFibers, reconcileChildFibers } from './childFibers'
 import { renderWithHooks } from './fiberHooks'
@@ -23,6 +24,8 @@ export const beginWork = (wip: FiberNode): FiberNode | null => {
       return null
     case FunctionComponent:
       return updateFunctionComponent(wip)
+    case Fragment:
+      return updateFragment(wip)
     default:
       if (__DEV__) {
         console.error('No corresponding tag in beginWork: ', wip.tag)
@@ -60,6 +63,12 @@ function updateHostComponent(wip: FiberNode) {
 
 function updateFunctionComponent(wip: FiberNode) {
   const nextChildren = renderWithHooks(wip)
+  reconcileChildren(wip, nextChildren)
+  return wip.child
+}
+
+function updateFragment(wip: FiberNode) {
+  const nextChildren = wip.pendingProps
   reconcileChildren(wip, nextChildren)
   return wip.child
 }
