@@ -8,13 +8,14 @@ function App() {
       ? [<li key="1">1</li>, <li key="2">2</li>, <li key="3">3</li>]
       : [<li key="1">3</li>, <li key="2">2</li>, <li key="3">1</li>]
   return (
-    <ul onClickCapture={() => setNum(num + 1)}>
-      <>
-        <li>1</li>
-        <li>2</li>
-      </>
-      {arr}
-      <li key="10">6</li>
+    <ul
+      onClickCapture={() => {
+        setNum((num) => num + 1)
+        setNum((num) => num + 1)
+        setNum((num) => num + 1)
+      }}
+    >
+      {num}
     </ul>
   )
 }

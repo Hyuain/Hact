@@ -4,17 +4,56 @@ import { FiberNode, FiberRootNode, createWorkInProgress } from './fiber'
 import { HostRoot } from './workTags'
 import { MutationMask, NoFlags } from './fiberFlags'
 import { commitMutationEffects } from './commitWork'
+import {
+  getHighestPriorityLane,
+  Lane,
+  markRootFinished,
+  mergeLanes,
+  NoLane,
+  SyncLane
+} from './fiberLanes'
+import { flushSyncCallbacks, scheduleSyncCallback } from './syncTaskQueue'
+import { scheduleMicroTask } from 'hostConfig'
 
 let workInProgress: FiberNode | null = null
+let wipRootRenderLane: Lane = NoLane
 
 // initialization
-function prepareRefreshStack(root: FiberRootNode) {
+function prepareRefreshStack(root: FiberRootNode, lane: Lane) {
   workInProgress = createWorkInProgress(root.current, {})
+  wipRootRenderLane = lane
 }
 
-export function scheduleUpdateOnFiber(fiber: FiberNode) {
+export function scheduleUpdateOnFiber(fiber: FiberNode, lane: Lane) {
   const root = markUpdateFromFiberToRoot(fiber)
-  renderRoot(root)
+  if (root === null) {
+    throw new Error('root is null')
+  }
+  markRootUpdated(root, lane)
+  ensureRootIsScheduled(root)
+}
+
+// entrance of schedule phase
+function ensureRootIsScheduled(root: FiberRootNode) {
+  const updateLane = getHighestPriorityLane(root.pendingLanes)
+  if (updateLane === NoLane) {
+    return
+  }
+  if (updateLane === SyncLane) {
+    // sync priority, use micro task to schedule
+    if (__DEV__) {
+      console.log('use micro task to schedule, priority:', updateLane)
+    }
+    scheduleSyncCallback(performSyncWorkOnRoot.bind(null, root, updateLane))
+    scheduleMicroTask(flushSyncCallbacks)
+  } else {
+    // other priority, use macro task to schedule
+  }
+}
+
+// mark lanes on root
+function markRootUpdated(root: FiberRootNode, lane: Lane) {
+  root.pendingLanes = mergeLanes(root.pendingLanes, lane)
 }
 
 // traverse from fiber to fiberRootNode
@@ -31,12 +70,22 @@ function markUpdateFromFiberToRoot(fiber: FiberNode): FiberRootNode | null {
   return null
 }
 
-function renderRoot(root: FiberRootNode | null) {
+// entrance of render phase
+function performSyncWorkOnRoot(root: FiberRootNode | null, lane: Lane) {
   if (root === null) {
     console.error('root is null')
     return
   }
-  prepareRefreshStack(root)
+  const nextLane = getHighestPriorityLane(root.pendingLanes)
+  if (nextLane !== SyncLane) {
+    // others priority lower than sync, or NoLane
+    ensureRootIsScheduled(root)
+    return
+  }
+
+  console.warn('RENDER! performSyncWorkOnRoot, lane: ', lane)
+
+  prepareRefreshStack(root, lane)
   while (true) {
     try {
       workLoop()
@@ -51,6 +100,9 @@ function renderRoot(root: FiberRootNode | null) {
   // the whole wip FiberNode tree
   const finishedWork = root.current.alternate
   root.finishedWork = finishedWork
+  root.finishedLane = lane
+  wipRootRenderLane = NoLane
+
   // commit using flags in wip FiberNode tree
   commitRoot(root)
 }
@@ -60,11 +112,19 @@ function commitRoot(root: FiberRootNode) {
   if (finishedWork === null) {
     return
   }
-  if (__DEV__) {
-    console.warn('commitRootStart: ', finishedWork)
+  const lane = root.finishedLane
+  if (lane === NoLane && __DEV__) {
+    console.error('commitRoot: lane is NoLane')
   }
-  // reset finishedWork
+  if (__DEV__) {
+    console.warn('COMMIT! commitRootStart: ', finishedWork)
+  }
+
+  // reset finishedWork and finishedLane
   root.finishedWork = null
+  root.finishedLane = NoLane
+  markRootFinished(root, lane)
+
   // check flags and subtreeFlags to determinate whether to run 3 phases:
   // beforeMutation, mutation, layout
   const subtreeHasEffects =
@@ -89,7 +149,7 @@ function workLoop() {
 }
 
 function performUnitOfWork(fiber: FiberNode) {
-  const next = beginWork(fiber)
+  const next = beginWork(fiber, wipRootRenderLane)
   fiber.memoizedProps = fiber.pendingProps
   if (next === null) {
     completeUnitOfWork(fiber)

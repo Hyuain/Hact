@@ -10,6 +10,7 @@ import {
 } from './updateQueue'
 import { Action } from 'shared/ReactTypes'
 import { scheduleUpdateOnFiber } from './workLoop'
+import { Lane, NoLane, requestUpdateLane } from './fiberLanes'
 
 let currentlyRenderingFiber: FiberNode | null = null
 let workInProgressHook: Hook | null = null
@@ -17,6 +18,7 @@ let workInProgressHook: Hook | null = null
 // trace hook in current FiberNode corresponding to currentlyRenderingFiber
 // workInProgressHook is a newly created hook according to currentHook
 let currentHook: Hook | null = null
+let renderLane: Lane = NoLane
 
 const { currentDispatcher } = internals
 
@@ -26,10 +28,11 @@ interface Hook {
   next: Hook | null
 }
 
-export function renderWithHooks(wip: FiberNode) {
+export function renderWithHooks(wip: FiberNode, lane: Lane) {
   currentlyRenderingFiber = wip
   // reset hooks linked list
   wip.memorizedState = null
+  renderLane = lane
 
   const current = wip.alternate
 
@@ -49,6 +52,7 @@ export function renderWithHooks(wip: FiberNode) {
   currentlyRenderingFiber = null
   workInProgressHook = null
   currentHook = null
+  renderLane = NoLane
   return children
 }
 
@@ -67,7 +71,12 @@ function updateState<State>(): [State, Dispatch<State>] {
   const pending = queue.shared.pending
 
   if (pending !== null) {
-    const { memorizedState } = processUpdateQueue(hook.memoizedState, pending)
+    const { memorizedState } = processUpdateQueue(
+      hook.memoizedState,
+      pending,
+      renderLane
+    )
+    queue.shared.pending = null
     hook.memoizedState = memorizedState
   }
 
@@ -105,9 +114,10 @@ function dispatchSetState<State>(
   updateQueue: UpdateQueue<State>,
   action: Action<State>
 ) {
-  const update = createUpdate(action)
+  const lane = requestUpdateLane()
+  const update = createUpdate(action, lane)
   enqueueUpdate(updateQueue, update)
-  scheduleUpdateOnFiber(fiber)
+  scheduleUpdateOnFiber(fiber, lane)
 }
 
 // find currently workInProgressHook
