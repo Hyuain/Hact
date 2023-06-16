@@ -6,36 +6,35 @@ import {
 import generatePackageJson from 'rollup-plugin-generate-package-json'
 import alias from '@rollup/plugin-alias'
 
-const { name, module, peerDependencies } = getPackageJSON('react-dom')
+const { name, module, peerDependencies } = getPackageJSON('react-noop-renderer')
 const packagePath = resolvePackagePath(name)
 const packageDistPath = resolvePackagePath(name, true)
 
 export default [
-  // ReactDOM package
+  // ReactNoopRenderer package
   {
     input: `${packagePath}/${module}`,
-    // before React 17, export react-dom
-    // after React 17, export react/client
     output: [
       {
         file: `${packageDistPath}/index.js`,
-        name: 'ReactDOM',
-        format: 'umd'
-      },
-      {
-        file: `${packageDistPath}/client.js`,
-        name: 'client',
+        name: 'ReactNoopRenderer',
         format: 'umd'
       }
     ],
-    // react-dom consists of hostConfig and react-reconciler,
-    // react-reconciler will use internals inshared which relies on react,
-    // so 'react' package will not be packaged into react-dom.
-    // but if so, both react-dom and react will have independent internals.
-    // we need them share internals and do not package react into react-dom.
     external: [...Object.keys(peerDependencies), 'scheduler'],
     plugins: [
-      ...getBaseRollupPlugins(),
+      ...getBaseRollupPlugins({
+        typescript: {
+          exclude: ['./packages/react-dom/**/*'],
+          tsconfigOverride: {
+            compilerOptions: {
+              paths: {
+                hostConfig: [`./${name}/src/hostConfig.ts`]
+              }
+            }
+          }
+        }
+      }),
       alias({
         entries: {
           hostConfig: `${packagePath}/src/hostConfig.ts`
@@ -57,18 +56,5 @@ export default [
         }
       })
     ]
-  },
-  // ReactTestUtils
-  {
-    input: `${packagePath}/test-utils.ts`,
-    output: [
-      {
-        file: `${packageDistPath}/test-utils.js`,
-        name: 'testUtils',
-        format: 'umd'
-      }
-    ],
-    external: ['react-dom', 'react'],
-    plugins: getBaseRollupPlugins()
   }
 ]
