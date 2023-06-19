@@ -6,6 +6,7 @@ import {
   createUpdateQueue,
   enqueueUpdate,
   processUpdateQueue,
+  Update,
   UpdateQueue
 } from './updateQueue'
 import { Action } from 'shared/ReactTypes'
@@ -28,6 +29,8 @@ interface Hook {
   memoizedState: any
   updateQueue: unknown
   next: Hook | null
+  baseState: any
+  baseQueue: Update<any> | null
 }
 
 export interface Effect {
@@ -187,16 +190,31 @@ function updateState<State>(): [State, Dispatch<State>] {
   const hook = updateWorkInProgressHook()
 
   const queue = hook.updateQueue as UpdateQueue<State>
+  const baseState = hook.baseState
   const pending = queue.shared.pending
+  let baseQueue = currentHook!.baseQueue
 
   if (pending !== null) {
-    const { memorizedState } = processUpdateQueue(
-      hook.memoizedState,
-      pending,
-      renderLane
-    )
+    // merge baseQueue and pending: pendingLast -> baseQueueFirst -> pendingFirst
+    if (baseQueue !== null) {
+      const baseFirst = baseQueue.next
+      const pendingFirst = pending.next
+      baseQueue.next = pendingFirst
+      pending.next = baseFirst
+    }
+    baseQueue = pending
+    // save update in current, so that the maybe-incoming high priority task can use it during this render
+    currentHook!.baseQueue = pending
     queue.shared.pending = null
+
+    const {
+      memorizedState,
+      baseState: newBaseState,
+      baseQueue: newBaseQueue
+    } = processUpdateQueue(baseState, baseQueue, renderLane)
     hook.memoizedState = memorizedState
+    hook.baseState = newBaseState
+    hook.baseQueue = newBaseQueue
   }
 
   return [hook.memoizedState, queue.dispatch as Dispatch<State>]
@@ -245,7 +263,9 @@ function mountWorkInProgressHook(): Hook {
   const hook: Hook = {
     memoizedState: null,
     updateQueue: null,
-    next: null
+    next: null,
+    baseState: null,
+    baseQueue: null
   }
   // first hook in mount
   if (workInProgressHook === null) {
@@ -294,7 +314,9 @@ function updateWorkInProgressHook(): Hook {
   const newHook: Hook = {
     memoizedState: currentHook.memoizedState,
     updateQueue: currentHook.updateQueue,
-    next: null
+    next: null,
+    baseState: currentHook.baseState,
+    baseQueue: currentHook.baseQueue
   }
   // first hook in update
   if (workInProgressHook === null) {

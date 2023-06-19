@@ -1,6 +1,6 @@
 import { Action } from 'shared/ReactTypes'
 import { Dispatch } from 'react/src/currentDispatcher'
-import { Lane } from './fiberLanes'
+import { isSubsetOfLanes, Lane } from './fiberLanes'
 
 export interface Update<State> {
   action: Action<State>
@@ -67,32 +67,68 @@ export const processUpdateQueue = <State>(
   baseState: State,
   pendingUpdate: Update<State> | null,
   renderLane: Lane
-): { memorizedState: State } => {
+): {
+  // the state calculated by updates whose lane is subset of renderLane
+  memorizedState: State
+  // the state calculated before the first skipped update (whose lane is not subset of renderLane)
+  baseState: State
+  // the first skipped update and all the updates after it
+  baseQueue: Update<State> | null
+} => {
   const result: ReturnType<typeof processUpdateQueue<State>> = {
-    memorizedState: baseState
+    memorizedState: baseState,
+    baseState,
+    baseQueue: null
   }
   if (pendingUpdate !== null) {
+    let newBaseState = baseState
+    let newBaseQueueFirst: Update<State> | null = null
+    let newBaseQueueLast: Update<State> | null = null
+    let tempState = baseState
+
     // the first update is the next of last update
     const first = pendingUpdate.next as Update<any>
     let pending = pendingUpdate.next as Update<any>
     // traverse the circular linked list of updates
     do {
       const updateLane = pending.lane
-      if (updateLane === renderLane) {
-        const action = pendingUpdate.action
-        if (action instanceof Function) {
-          baseState = action(baseState)
+      if (!isSubsetOfLanes(renderLane, updateLane)) {
+        // current update has lower priority than the current render, do skip it
+        const clone = createUpdate(pending.action, pending.lane)
+        if (newBaseQueueFirst === null) {
+          newBaseQueueFirst = newBaseQueueLast = clone
+          newBaseState = tempState
         } else {
-          baseState = action
+          newBaseQueueLast!.next = clone
+          newBaseQueueLast = clone
         }
       } else {
-        if (__DEV__) {
-          console.warn('processUpdateQueue: Unexpected lane:', updateLane)
+        // current update has enough priority to be executed
+        if (newBaseQueueLast !== null) {
+          const clone = createUpdate(pending.action, pending.lane)
+          newBaseQueueLast.next = clone
+          newBaseQueueLast = clone
+        }
+        const action = pendingUpdate.action
+        if (action instanceof Function) {
+          tempState = action(baseState)
+        } else {
+          tempState = action
         }
       }
       pending = pending.next as Update<any>
     } while (pending !== first)
+
+    if (newBaseQueueLast === null) {
+      // no update is skipped
+      newBaseState = tempState
+    } else {
+      newBaseQueueLast.next = newBaseQueueFirst
+    }
+
+    result.memorizedState = tempState
+    result.baseState = newBaseState
+    result.baseQueue = newBaseQueueLast
   }
-  result.memorizedState = baseState
   return result
 }

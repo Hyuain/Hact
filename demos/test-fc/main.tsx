@@ -1,54 +1,46 @@
 import React, { useState, useEffect } from 'react'
-// import ReactDOM from 'react-dom/client'
-import ReactNoopRenderer from 'react-noop-renderer'
-
-function App() {
-  return (
-    <>
-      <Child />
-      <div>hello world</div>
-    </>
-  )
-}
-
-function Child() {
-  return <div>I am child</div>
-}
-
-const root = ReactNoopRenderer.createRoot()
-
-root.render(<App />)
-
-window.root = root
+import ReactDOM from 'react-dom/client'
+// import ReactNoopRenderer from 'react-noop-renderer'
 
 // function App() {
-//   const [num, updateNum] = useState(0)
-//   useEffect(() => {
-//     console.log('App mount')
-//   }, [])
-//
-//   useEffect(() => {
-//     console.log('num change create', num)
-//     return () => {
-//       console.log('num change destroy', num)
-//     }
-//   }, [num])
-//
 //   return (
-//     <div onClick={() => updateNum(num + 1)}>
-//       {num === 0 ? <Child /> : 'noop'}
-//     </div>
+//     <>
+//       <Child />
+//       <div>hello world</div>
+//     </>
 //   )
 // }
 //
 // function Child() {
-//   useEffect(() => {
-//     console.log('Child mount')
-//     return () => console.log('Child unmount')
-//   }, [])
-//
-//   return <>'i am child'</>
+//   return <div>I am child</div>
 // }
+//
+// const root = ReactNoopRenderer.createRoot()
+//
+// root.render(<App />)
+//
+// window.root = root
+
+function App() {
+  const [num, updateNum] = useState(100)
+
+  return (
+    <>
+      <ul onClick={() => updateNum(50)}>
+        {new Array(num).fill(null).map((_, i) => (
+          <Child key={i}>{i}</Child>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+function Child({ children }) {
+  const now = performance.now()
+  while (performance.now() - now < 4) {}
+
+  return <li>{children}</li>
+}
 
 // function App() {
 //   const [num, setNum] = useState(100)
@@ -91,6 +83,6 @@ window.root = root
 //   return <div>I am child!</div>
 // }
 
-// ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-//   <App />
-// )
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+  <App />
+)

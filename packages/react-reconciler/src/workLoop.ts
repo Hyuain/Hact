@@ -210,7 +210,7 @@ function renderRoot(
 ): RootExitStatus {
   if (__DEV__) {
     console.warn(
-      `RENDER! RenderRoot, lane: ${lane}. ${
+      `RENDER! RenderRoot, lane: ${lane.toString(2)}. ${
         shouldTimeSlice ? 'Concurrent' : 'Sync'
       } update`
     )
