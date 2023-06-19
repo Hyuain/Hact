@@ -10,7 +10,7 @@ import {
   Update,
   UpdateQueue
 } from './updateQueue'
-import { Action } from 'shared/ReactTypes'
+import { Action, Ref } from 'shared/ReactTypes'
 import { scheduleUpdateOnFiber } from './workLoop'
 import { Lane, NoLane, requestUpdateLane } from './fiberLanes'
 import { Flags, PassiveEffect } from './fiberFlags'
@@ -84,13 +84,28 @@ export function renderWithHooks(wip: FiberNode, lane: Lane) {
 const HooksDispatcherOnMount: Dispatcher = {
   useState: mountState,
   useEffect: mountEffect,
-  useTransition: mountTransition
+  useTransition: mountTransition,
+  useRef: mountRef
 }
 
 const HooksDispatcherOnUpdate: Dispatcher = {
   useState: updateState,
   useEffect: updateEffect,
-  useTransition: updateTransition
+  useTransition: updateTransition,
+  useRef: updateRef
+}
+
+// @ts-ignore
+function updateRef<T>(initialValue: T | null): { current: T | null } {
+  const hook = updateWorkInProgressHook()
+  return hook.memoizedState
+}
+
+function mountRef<T>(initialValue: T | null): { current: T | null } {
+  const hook = mountWorkInProgressHook()
+  const ref: Ref<T> = { current: initialValue }
+  hook.memoizedState = ref
+  return ref
 }
 
 function updateTransition(): [boolean, (callback: () => void) => void] {

@@ -13,7 +13,7 @@ import {
   HostRoot,
   HostText
 } from './workTags'
-import { NoFlags, Update } from './fiberFlags'
+import { NoFlags, Ref, Update } from './fiberFlags'
 
 // dfs 递归中的“归”
 // construct off-screen DOM tree for Host
@@ -27,6 +27,10 @@ export const completeWork = (wip: FiberNode) => {
         // update
         // TODO: need to check whether to markUpdate
         markUpdate(wip)
+        // mark ref
+        if (current.ref !== wip.ref) {
+          markRef(wip)
+        }
       } else {
         // mount
         // 1. construct DOM
@@ -34,6 +38,10 @@ export const completeWork = (wip: FiberNode) => {
         // 2. append DOM into DOM Tree
         appendAllChildren(instance, wip)
         wip.stateNode = instance
+        // 3. mark ref
+        if (wip.ref !== null) {
+          markRef(wip)
+        }
       }
       bubbleProperties(wip)
       return null
@@ -109,4 +117,8 @@ function bubbleProperties(wip: FiberNode) {
 
 function markUpdate(fiber: FiberNode) {
   fiber.flags |= Update
+}
+
+function markRef(fiber: FiberNode) {
+  fiber.flags |= Ref
 }

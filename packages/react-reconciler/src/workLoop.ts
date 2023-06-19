@@ -7,11 +7,12 @@ import {
   PendingPassiveEffects
 } from './fiber'
 import { HostRoot } from './workTags'
-import { MutationMask, NoFlags, PassiveMask } from './fiberFlags'
+import { LayoutMask, MutationMask, NoFlags, PassiveMask } from './fiberFlags'
 import {
   commitHookEffectListCreate,
   commitHookEffectListDestroy,
   commitHookEffectListUnmount,
+  commitLayoutEffects,
   commitMutationEffects
 } from './commitWork'
 import {
@@ -287,9 +288,10 @@ function commitRoot(root: FiberRootNode) {
   // check flags and subtreeFlags to determinate whether to run 3 phases:
   // beforeMutation, mutation, layout
   const subtreeHasEffects =
-    (finishedWork.subtreeFlags & (MutationMask | PassiveMask)) !== NoFlags
+    (finishedWork.subtreeFlags & (MutationMask | LayoutMask | PassiveMask)) !==
+    NoFlags
   const rootHasEffect =
-    (finishedWork.flags & (MutationMask | PassiveMask)) !== NoFlags
+    (finishedWork.flags & (MutationMask | LayoutMask | PassiveMask)) !== NoFlags
   if (subtreeHasEffects || rootHasEffect) {
     // 1. beforeMutation
     // 2. mutation
@@ -297,6 +299,7 @@ function commitRoot(root: FiberRootNode) {
     // let finishedWork Fiber tree be current Fiber tree (double cache)
     root.current = finishedWork
     // 3. layout
+    commitLayoutEffects(finishedWork, root)
   } else {
     root.current = finishedWork
   }
