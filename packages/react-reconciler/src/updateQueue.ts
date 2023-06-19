@@ -109,7 +109,7 @@ export const processUpdateQueue = <State>(
           newBaseQueueLast.next = clone
           newBaseQueueLast = clone
         }
-        const action = pendingUpdate.action
+        const action = pending.action
         if (action instanceof Function) {
           tempState = action(baseState)
         } else {

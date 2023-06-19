@@ -94,6 +94,9 @@ function ensureRootIsScheduled(root: FiberRootNode) {
     scheduleMicroTask(flushSyncCallbacks)
   } else {
     // other priority, use macro task to schedule
+    if (__DEV__) {
+      console.log('use macro task to schedule, priority:', updateLane)
+    }
     const schedulerPriority = lanesToSchedulerPriority(updateLane)
     newCallback = scheduleCallback(
       schedulerPriority,
@@ -256,7 +259,7 @@ function commitRoot(root: FiberRootNode) {
     console.error('commitRoot: lane is NoLane')
   }
   if (__DEV__) {
-    console.warn('COMMIT! commitRootStart: ', finishedWork)
+    console.warn(`COMMIT! commitRootStart, lane: ${lane.toString(2)}.`)
   }
 
   // reset finishedWork and finishedLane
