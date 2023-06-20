@@ -10,7 +10,7 @@ import {
   Update,
   UpdateQueue
 } from './updateQueue'
-import { Action, Ref } from 'shared/ReactTypes'
+import { Action, ReactContext, Ref } from 'shared/ReactTypes'
 import { scheduleUpdateOnFiber } from './workLoop'
 import { Lane, NoLane, requestUpdateLane } from './fiberLanes'
 import { Flags, PassiveEffect } from './fiberFlags'
@@ -85,14 +85,27 @@ const HooksDispatcherOnMount: Dispatcher = {
   useState: mountState,
   useEffect: mountEffect,
   useTransition: mountTransition,
-  useRef: mountRef
+  useRef: mountRef,
+  useContext: readContext
 }
 
 const HooksDispatcherOnUpdate: Dispatcher = {
   useState: updateState,
   useEffect: updateEffect,
   useTransition: updateTransition,
-  useRef: updateRef
+  useRef: updateRef,
+  useContext: readContext
+}
+
+function readContext<T>(context: ReactContext<T>): T {
+  const consumer = currentlyRenderingFiber
+  if (consumer === null) {
+    throw new Error(
+      'Context can only be read in component while React is rendering'
+    )
+  }
+  const value = context._currentValue
+  return value
 }
 
 // @ts-ignore

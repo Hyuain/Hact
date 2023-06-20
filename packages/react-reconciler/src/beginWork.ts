@@ -1,17 +1,19 @@
-import { ReactElement } from 'shared/ReactTypes'
+import { ReactElement, ReactProvider } from 'shared/ReactTypes'
 import { FiberNode } from './fiber'
-import { UpdateQueue, processUpdateQueue } from './updateQueue'
+import { processUpdateQueue, UpdateQueue } from './updateQueue'
 import {
-  HostRoot,
-  HostComponent,
-  HostText,
+  ContextProvider,
+  Fragment,
   FunctionComponent,
-  Fragment
+  HostComponent,
+  HostRoot,
+  HostText
 } from './workTags'
 import { mountChildFibers, reconcileChildFibers } from './childFibers'
 import { renderWithHooks } from './fiberHooks'
 import { Lane } from './fiberLanes'
 import { Ref } from './fiberFlags'
+import { pushProvider } from './fiberContext'
 
 // dfs 递归中的“递”
 export const beginWork = (
@@ -31,6 +33,8 @@ export const beginWork = (
       return updateFunctionComponent(wip, renderLane)
     case Fragment:
       return updateFragment(wip)
+    case ContextProvider:
+      return updateContextProvider(wip)
     default:
       if (__DEV__) {
         console.error('No corresponding tag in beginWork: ', wip.tag)
@@ -75,6 +79,28 @@ function updateFunctionComponent(wip: FiberNode, renderLane: Lane) {
 
 function updateFragment(wip: FiberNode) {
   const nextChildren = wip.pendingProps
+  reconcileChildren(wip, nextChildren)
+  return wip.child
+}
+
+function updateContextProvider(wip: FiberNode) {
+  const provider: ReactProvider<any> = wip.type
+  const context = provider._context
+  const oldProps = wip.memoizedProps
+  const newProps = wip.pendingProps
+  const newValue = newProps.value
+
+  if (__DEV__ && !('value' in newProps)) {
+    console.error('Missing value in context provider: ', provider)
+  }
+
+  if (newValue !== oldProps.value) {
+    // TODO: dfs if any children consume context, mark component update, to make children of shouldComponentUpdate=false still update
+  }
+
+  pushProvider(context, newValue)
+
+  const nextChildren = wip.pendingProps.children
   reconcileChildren(wip, nextChildren)
   return wip.child
 }

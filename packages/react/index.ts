@@ -25,6 +25,11 @@ export const useRef: Dispatcher['useRef'] = (initialValue) => {
   return dispatcher.useRef(initialValue)
 }
 
+export const useContext: Dispatcher['useContext'] = (context) => {
+  const dispatcher = resolveDispatcher()
+  return dispatcher.useContext(context)
+}
+
 // internal data sharing layer
 export const __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = {
   currentDispatcher,
@@ -35,3 +40,5 @@ export const version = '0.0.0'
 
 // export jsx and jsxDEV according to the environment
 export const createElement = jsx
+
+export { createContext } from './src/context'
