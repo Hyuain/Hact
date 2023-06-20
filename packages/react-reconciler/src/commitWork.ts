@@ -87,7 +87,6 @@ const commitMutationEffectsOnFiber = (
   }
   if ((flags & Ref) !== NoFlags && tag === HostComponent) {
     safelyDetachRef(finishedWork)
-    finishedWork.flags &= ~Ref
   }
 }
 
